@@ -1,0 +1,14 @@
+$TTL 300
+@ IN SOA localhost. root.localhost. (
+	1 ; Serial
+	604800 ; Refresh
+	86400 ; Retry
+	2419200 ; Expire
+	604800 ; Negative cache TTL
+)
+
+
+@			300		IN	NS		localhost.
+record-5	5		IN	A		192.168.0.5
+record-60	60		IN	A		192.168.0.60
+record-120	120		IN	A		192.168.0.120
