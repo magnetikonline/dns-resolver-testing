@@ -14,15 +14,20 @@ Includes a series of results for simulated scenarios against Linux and Windows o
 
 ## Summary
 The TL;DR and takeaways from the tests:
-- Linux distributions (more specifically those implementing `resolv`) **will not** cache DNS query results - ever.
-- A Windows resolver **will cache** a query result for the duration of the record time to live (TTL). In addition algorithms are implemented to help avoid continual re-querying of known unavailable DNS servers.
-- Where a resolver is required to query secondary DNS server(s) due to system/network outage a delayed result penalty will be incurred by the caller:
-	- For Linux systems with `resolv` the delay is approximately `5000ms` per DNS server hop.
-	- Windows will attempt the next server hop after approximately `30ms`.
-- Linux systems (where no caching is offered) an introduced delay five seconds or greater **per query** may prove fatal for applications executing repeated lookups. Solutions for mitigation might include:
-	- Replace `resolv` with a caching resolver such as [Dnsmasq](http://www.thekelleys.org.uk/dnsmasq/doc.html), [Unbound](https://www.unbound.net/) or [nscd](https://linux.die.net/man/8/nscd).
-	- Implement a DNS caching layer internally to applications.
-	- Modification to the [`resolv.conf`](https://linux.die.net/man/5/resolv.conf) `options` set, notably `timeout`, `attempts` and `rotate`.
+- Linux distributions (more specifically those implementing `resolv`) **will not** cache DNS query results.
+- The Windows resolver **will cache** a query result for the duration of record time to live (TTL). In addition algorithms are implemented to help avoid possible continual re-querying of known unavailable nameservers.
+- Whenever a resolver is required to query secondary nameserver(s) (due to system/network outage) a delayed result penalty is incurred by the caller:
+	- For Linux systems with `resolv`, the delay is approximately `5000ms` per DNS server hop.
+	- Windows will attempt the next nameserver after approximately `30ms`.
+- Linux systems (where no caching is offered) an introduced delay of five seconds or greater **per query** may prove fatal for applications executing repeated lookups. Possible solutions for mitigation include:
+	- Replace `resolv` with:
+		- A resolver implementing local caching. Examples include: [Dnsmasq](http://www.thekelleys.org.uk/dnsmasq/doc.html), [Unbound](https://www.unbound.net/) or [nscd](https://linux.die.net/man/8/nscd).
+		- The [musl libc](https://www.musl-libc.org/) standard library:
+			- Implements an alternative algorithm for `resolv` where each given nameserver to `resolv.conf` is [queried in parallel](http://wiki.musl-libc.org/wiki/Functional_differences_from_glibc#Name_Resolver_.2F_DNS).
+			- This behavior results in additional UDP network traffic, but accepts the first answer received - avoiding rotation and reply delays where two or more nameservers are available on a network.
+			- Musl is implemented by [Alpine Linux](https://alpinelinux.org/posts/Alpine-Linux-has-switched-to-musl-libc.html), making it a good possible choice for applications published as [Docker images](https://hub.docker.com/_/alpine/).
+	- Implement a caching layer internal to applications themselves.
+	- Modification to the [`resolv.conf`](https://linux.die.net/man/5/resolv.conf) `options` set, notably the `timeout`, `attempts` and `rotate` parameters may prove to be beneficial.
 
 ## Test suite
 Consisting of the following components:
