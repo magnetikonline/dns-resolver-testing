@@ -19,9 +19,9 @@ apt -y install bind9 dnsutils
 apt-get clean
 
 # setup bind log directory
-mkdir -p $QUERY_LOG_DIR
-rm -f $QUERY_LOG_DIR/*
-chown $BIND_USER:$BIND_USER $QUERY_LOG_DIR
+mkdir -p "$QUERY_LOG_DIR"
+rm -f "$QUERY_LOG_DIR"/*
+chown $BIND_USER:$BIND_USER "$QUERY_LOG_DIR"
 
 # copy bind config files into place
 cp "$FILE_BASE_DIR/named.conf" /etc/bind/named.conf
