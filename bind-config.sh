@@ -13,14 +13,14 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # apt update, install bind
-apt -y update
-apt -y upgrade
-apt -y install bind9 dnsutils
+apt --yes update
+apt --yes upgrade
+apt --yes install bind9 dnsutils
 apt-get clean
 
 # setup bind log directory
-mkdir -p "$QUERY_LOG_DIR"
-rm -f "$QUERY_LOG_DIR"/*
+mkdir --parents "$QUERY_LOG_DIR"
+rm --force "$QUERY_LOG_DIR"/*
 chown $BIND_USER:$BIND_USER "$QUERY_LOG_DIR"
 
 # copy bind config files into place

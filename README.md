@@ -21,9 +21,12 @@ The TL;DR and takeaways from the tests:
 	- Windows will attempt the next nameserver after approximately `30ms`.
 - Linux systems (where no caching is offered) an introduced delay of five seconds or greater **per query** may prove fatal for applications executing repeated lookups. Possible solutions for mitigation include:
 	- Replace `resolv` with:
-		- A resolver implementing local caching. Examples include: [Dnsmasq](http://www.thekelleys.org.uk/dnsmasq/doc.html), [Unbound](https://www.unbound.net/) or [nscd](https://linux.die.net/man/8/nscd).
+		- A resolver implementing local caching such as:
+			- [Dnsmasq](http://www.thekelleys.org.uk/dnsmasq/doc.html).
+			- [Unbound](https://www.unbound.net/), which offers a powerful [`prefetch`](https://www.unbound.net/documentation/unbound.conf.html) ability to re-fetch popular records before they expire from the local resolver cache.
+			- [nscd](https://linux.die.net/man/8/nscd).
 		- The [musl libc](https://www.musl-libc.org/) standard library:
-			- Implements an alternative algorithm for `resolv` where each given nameserver to `resolv.conf` is [queried in parallel](http://wiki.musl-libc.org/wiki/Functional_differences_from_glibc#Name_Resolver_.2F_DNS).
+			- Implements an alternative algorithm for `resolv` where each given nameserver to `resolv.conf` is [queried in parallel](https://wiki.musl-libc.org/functional-differences-from-glibc.html#Name_Resolver_.2F_DNS).
 			- This behavior results in additional UDP network traffic, but accepts the first answer received - avoiding rotation and reply delays where two or more nameservers are available on a network.
 			- Musl is implemented by [Alpine Linux](https://alpinelinux.org/posts/Alpine-Linux-has-switched-to-musl-libc.html), making it a good possible choice for applications published as [Docker images](https://hub.docker.com/_/alpine/).
 	- Implement a caching layer internal to applications themselves.
