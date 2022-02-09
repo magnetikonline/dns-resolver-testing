@@ -1,4 +1,5 @@
 # DNS resolver testing
+
 Configuration and scripts for testing DNS resolvers and their behaviors during periods of network or DNS server instability.
 
 Includes a series of results for simulated scenarios against Linux and Windows operating systems.
@@ -10,10 +11,24 @@ Includes a series of results for simulated scenarios against Linux and Windows o
 - [Test scenarios](#test-scenarios)
 - [Results](#results)
 	- [Linux](#linux)
+		- [All `active`](#all-active)
+		- [Primary `down`](#primary-down)
+		- [Primary `offline`](#primary-offline)
+		- [Primary `down`, secondary `offline`](#primary-down-secondary-offline)
+		- [All `down`](#all-down)
+		- [All `offline`](#all-offline)
 	- [Windows](#windows)
+		- [All `active`](#all-active-1)
+		- [Primary `down`](#primary-down-1)
+		- [Primary `offline`](#primary-offline-1)
+		- [Primary `down`, secondary `offline`](#primary-down-secondary-offline-1)
+		- [All `down`](#all-down-1)
+		- [All `offline`](#all-offline-1)
 
 ## Summary
+
 The TL;DR and takeaways from the tests:
+
 - Linux distributions (more specifically those implementing `resolv`) **will not** cache DNS query results.
 - The Windows resolver **will cache** a query result for the duration of record time to live (TTL). In addition algorithms are implemented to help avoid possible continual re-querying of known unavailable nameservers.
 - Whenever a resolver is required to query secondary nameserver(s) (due to system/network outage) a delayed result penalty is incurred by the caller:
@@ -22,7 +37,7 @@ The TL;DR and takeaways from the tests:
 - Linux systems (where no caching is offered) an introduced delay of five seconds or greater **per query** may prove fatal for applications executing repeated lookups. Possible solutions for mitigation include:
 	- Replace `resolv` with:
 		- A resolver implementing local caching such as:
-			- [Dnsmasq](http://www.thekelleys.org.uk/dnsmasq/doc.html).
+			- [Dnsmasq](https://thekelleys.org.uk/dnsmasq/doc.html).
 			- [Unbound](https://www.unbound.net/), which offers a powerful [`prefetch`](https://www.unbound.net/documentation/unbound.conf.html) ability to re-fetch popular records before they expire from the local resolver cache.
 			- [nscd](https://linux.die.net/man/8/nscd).
 		- The [musl libc](https://www.musl-libc.org/) standard library:
@@ -33,13 +48,17 @@ The TL;DR and takeaways from the tests:
 	- Modification to the [`resolv.conf`](https://linux.die.net/man/5/resolv.conf) `options` set, notably the `timeout`, `attempts` and `rotate` parameters may prove to be beneficial.
 
 ## Test suite
+
 Consisting of the following components:
+
 - Two authoritative DNS servers running [BIND](https://www.isc.org/downloads/bind/) and serving a single mock DNS zone.
 - Client operating system instances with DNS resolvers set to the two nameservers, thus *only* able to resolve the defined mock zone.
 - Node.js utility to continually poll a DNS record in the mock zone via each operating system's resolver.
 
 ### DNS server config
+
 The [`bind-config.sh`](bind-config.sh) script will setup the following on a `Ubuntu 14.04LTS` host:
+
 - Upgrade distro packages via `apt`.
 - Install `bind9` and `dnsutils` packages via `apt`.
 - Configure BIND as a non-recursive nameserver with a single authoritative zone of [`domain.test`](bind-config/db.domain.test).
@@ -49,12 +68,16 @@ The [`bind-config.sh`](bind-config.sh) script will setup the following on a `Ubu
 BIND related configuration for setup located under [`/bind-config`](bind-config).
 
 ### Resolve poller
+
 Node.js utility [`resolvepoll/app.js`](resolvepoll/app.js) continually polls for a single record within the mock DNS zone:
+
 - Queries performed via [`dns.lookup()`](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback).
 - Results are logged to both console and file with 'fetch time taken' in milliseconds.
 
 ## Test scenarios
+
 Simulations played out for both Linux and Windows operating systems:
+
 - All DNS servers `active` and answering zone requests.
 - Primary `down`.
 - Primary `offline`.
@@ -63,6 +86,7 @@ Simulations played out for both Linux and Windows operating systems:
 - All `offline`.
 
 Where server states are defined as:
+
 - Active network connection - but no DNS service listening is classed as `down`.
 - Disconnected from network or powered down is `offline`.
 
@@ -73,24 +97,29 @@ In each case _no modifications_ have been made to base operating system or DNS r
 ## Results
 
 ### Linux
+
 **Operating system:** Ubuntu 14.04LTS
 
 #### All `active`
+
 - Resolver queries first DNS server and receives a **successful** timely response, secondary server never queried.
 - Each query sends UDP request packets to the **first** server.
 
 #### Primary `down`
+
 - Resolver queries first DNS server and receives a timely **rejection**.
 - Resolver then queries secondary server and receives a **successful** timely response.
 - Each query sends UDP request packets to **both** servers.
 
 #### Primary `offline`
+
 - Resolver queries first DNS server.
 - Resolver waits approximately `5000ms` before returning with server **failure**.
 - Resolver then queries secondary server and receives a **successful** timely response.
 - Each query sends UDP request packets to **both** servers.
 
 #### Primary `down`, secondary `offline`
+
 - Resolver queries first DNS server and receives a timely **rejection**.
 - Resolver then queries secondary DNS server, attempting sends of multiple UDP request packets.
 - After approximately `20000ms` returns with server **failure**.
@@ -98,6 +127,7 @@ In each case _no modifications_ have been made to base operating system or DNS r
 - Each query sends UDP request packets to **both** servers.
 
 #### All `down`
+
 - First iteration:
 	- Resolver queries first DNS server and receives a timely **rejection**.
 	- Resolver then queries secondary DNS server, again receives timely **rejection**.
@@ -110,6 +140,7 @@ In each case _no modifications_ have been made to base operating system or DNS r
 - Each query sends UDP request packets to **both** servers.
 
 #### All `offline`
+
 - Resolver queries first DNS server, returns with server **failure**.
 - Resolver then queries secondary DNS server, again returning with server **failure**.
 - Multiple UDP request packet attempts are then made to both servers.
@@ -117,20 +148,24 @@ In each case _no modifications_ have been made to base operating system or DNS r
 - Each query sends UDP request packets to **both** servers.
 
 ### Windows
+
 **Operating system:** Windows 2012 R2
 
 #### All `active`
+
 - Resolver queries first DNS server and receives a **successful** timely response, secondary server never queried.
 - Query result **cached** by resolver for duration of the record time to live.
 - Repeated queries within this duration **will not incur** additional UDP request packets.
 
 #### Primary `down`
+
 - Resolver queries first DNS server and receives a timely **rejection**.
 - Resolver then queries secondary server and receives a **successful** timely response.
 - Query result **cached** by resolver for duration of the record time to live.
 - Repeated queries within this duration **will not incur** additional UDP request packets.
 
 #### Primary `offline`
+
 - Resolver queries first DNS server.
 - Resolver waits approximately `30ms` before returning with server **failure**.
 - Resolver then queries secondary server and receives a **successful** timely response.
@@ -138,6 +173,7 @@ In each case _no modifications_ have been made to base operating system or DNS r
 - Repeated queries within this duration **will not incur** additional UDP request packets.
 
 #### Primary `down`, secondary `offline`
+
 - Resolver queries first DNS server and receives a timely **rejection**.
 - Resolver then queries secondary DNS server and returns instantly with server **failure**.
 - Completes with **unable to resolve hostname** result.
@@ -145,6 +181,7 @@ In each case _no modifications_ have been made to base operating system or DNS r
 - Repeated queries **incur additional** attempts made to **both** servers at intervals of approximately two UDP packets every five seconds.
 
 #### All `down`
+
 - First iteration:
 	- Resolver queries first DNS server and receives a timely **rejection**.
 	- Resolver then queries secondary DNS server, again receives timely **rejection**.
@@ -157,6 +194,7 @@ In each case _no modifications_ have been made to base operating system or DNS r
 - The resolver **will not** cache any query results.
 
 #### All `offline`
+
 - Request iteration:
 	- Resolver queries first DNS server, returns with server **failure**.
 	- Resolver then queries secondary DNS server, again returning with server **failure**.
